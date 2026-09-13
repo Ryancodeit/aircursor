@@ -1,4 +1,6 @@
-export type ClientRole = 'screen' | 'controller';
+export type ClientRole = 'screen' | 'controller' | 'desktop';
+
+export type TargetDeviceMode = 'screen' | 'desktop';
 
 export type SessionStatus = 'idle' | 'waiting_for_controller' | 'connected' | 'disconnected' | 'error';
 
@@ -8,6 +10,7 @@ export interface RoomSession {
   createdAt: number;
   screenConnected: boolean;
   controllerConnected: boolean;
+  targetDeviceType?: TargetDeviceMode;
 }
 
 export interface OrientationData {
@@ -32,14 +35,20 @@ export type ActionType =
   | 'click'
   | 'right_click'
   | 'double_click'
+  | 'mouse_down'
+  | 'mouse_up'
+  | 'drag_start'
+  | 'drag_end'
   | 'scroll'
   | 'calibrate'
+  | 'emergency_stop'
   | 'laser_toggle'
   | 'mode_change';
 
 export interface CursorActionPayload {
   type: ActionType;
   deltaY?: number; // for scroll
+  button?: 'left' | 'right' | 'middle';
   mode?: 'cursor' | 'laser' | 'presentation';
   timestamp: number;
 }

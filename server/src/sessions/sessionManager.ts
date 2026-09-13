@@ -1,11 +1,13 @@
 import { WebSocket } from 'ws';
 import crypto from 'crypto';
+import { DeviceType } from '@aircursor/shared';
 
 export interface RoomState {
   roomId: string;
   pairCode: string;
   screenSocket: WebSocket | null;
   controllerSocket: WebSocket | null;
+  targetDeviceType: DeviceType;
   createdAt: number;
   lastActivity: number;
   targetMetadata?: {
@@ -21,8 +23,9 @@ export interface RoomState {
 export interface ISessionStore {
   createRoom(
     screenSocket: WebSocket,
-    metadata?: { userAgent?: string; ip?: string }
-  ): { roomId: string; pairCode: string };
+    metadata?: { userAgent?: string; ip?: string },
+    deviceType?: DeviceType
+  ): { roomId: string; pairCode: string; deviceType: DeviceType };
   joinRoom(
     controllerSocket: WebSocket,
     roomIdOrCode: string,
@@ -59,8 +62,9 @@ export class SessionManager implements ISessionStore {
 
   public createRoom(
     screenSocket: WebSocket,
-    metadata?: { userAgent?: string; ip?: string }
-  ): { roomId: string; pairCode: string } {
+    metadata?: { userAgent?: string; ip?: string },
+    deviceType: DeviceType = 'screen'
+  ): { roomId: string; pairCode: string; deviceType: DeviceType } {
     let pairCode = this.generatePairCode();
     // Ensure uniqueness
     let attempts = 0;
@@ -75,6 +79,7 @@ export class SessionManager implements ISessionStore {
       pairCode,
       screenSocket,
       controllerSocket: null,
+      targetDeviceType: deviceType,
       createdAt: Date.now(),
       lastActivity: Date.now(),
       targetMetadata: metadata,
@@ -84,7 +89,7 @@ export class SessionManager implements ISessionStore {
     this.roomsByPairCode.set(pairCode, room);
     this.socketToRoom.set(screenSocket, { roomId, role: 'screen' });
 
-    return { roomId, pairCode };
+    return { roomId, pairCode, deviceType };
   }
 
   public joinRoom(
@@ -100,7 +105,7 @@ export class SessionManager implements ISessionStore {
     }
 
     if (!room.screenSocket || room.screenSocket.readyState !== WebSocket.OPEN) {
-      return { success: false, error: 'Target screen is no longer connected.' };
+      return { success: false, error: 'Target device is no longer connected.' };
     }
 
     // Reject if session already has an active controller connected (1 target : 1 controller limit)

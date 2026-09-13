@@ -22,6 +22,8 @@ web_modules/
 dist/
 dist-ssr/
 build/
+bin/
+obj/
 *.egg-info/
 .output/
 

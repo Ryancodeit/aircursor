@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Smartphone, Compass, ArrowLeft, Sliders, Zap, MousePointer, LogOut, QrCode, Check } from 'lucide-react';
+import { Smartphone, Compass, ArrowLeft, Sliders, Zap, MousePointer, LogOut, QrCode, Check, ShieldAlert, Monitor, Laptop } from 'lucide-react';
 import { AirCursorSocketClient } from '../networking/socketClient.js';
 import { MotionController } from '../motion/MotionController.js';
 import { getFriendlyDeviceLabel } from '../utils/deviceLabel.js';
 import { DebugPanel } from '../components/common/DebugPanel.js';
-import { SessionStatus } from '@aircursor/shared';
+import { SessionStatus, DeviceType } from '@aircursor/shared';
 import './ControllerPage.css';
 
 interface ControllerPageProps {
@@ -15,9 +15,11 @@ interface ControllerPageProps {
 export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = '', onBack }) => {
   const [inputCode, setInputCode] = useState<string>(initialCode);
   const [status, setStatus] = useState<SessionStatus>('idle');
+  const [targetDeviceType, setTargetDeviceType] = useState<DeviceType>('screen');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isCalibratedToast, setIsCalibratedToast] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const [sensitivity, setSensitivity] = useState<number>(22);
   const [showDebug, setShowDebug] = useState<boolean>(false);
 
@@ -92,16 +94,19 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
 
       client.addStateListener((wsState, attempt) => {
         if (wsState === 'RECONNECTING') {
-          setErrorMessage(`Reconnecting to screen... (attempt ${attempt})`);
+          setErrorMessage(`Reconnecting to server... (attempt ${attempt})`);
         } else if (wsState === 'DISCONNECTED') {
           setStatus('disconnected');
-          setErrorMessage('Disconnected from screen');
+          setErrorMessage('Disconnected from device');
         }
       });
 
       client.addListener((msg) => {
         if (msg.type === 'session_joined') {
           setStatus('connected');
+          if (msg.targetDeviceType) {
+            setTargetDeviceType(msg.targetDeviceType);
+          }
         } else if (msg.type === 'error') {
           setStatus('error');
           setErrorMessage(msg.message);
@@ -118,6 +123,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
   const handleCalibrate = () => {
     triggerHaptic();
     motionControllerRef.current.calibrate();
+    socketRef.current?.sendCalibrate();
     setIsCalibratedToast(true);
     setTimeout(() => setIsCalibratedToast(false), 2500);
   };
@@ -132,6 +138,23 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     socketRef.current?.sendRightClick();
   };
 
+  const handleToggleDrag = () => {
+    triggerHaptic();
+    if (isDragging) {
+      socketRef.current?.sendDragEnd();
+      setIsDragging(false);
+    } else {
+      socketRef.current?.sendDragStart();
+      setIsDragging(true);
+    }
+  };
+
+  const handleEmergencyStop = () => {
+    triggerHaptic();
+    socketRef.current?.sendEmergencyStop();
+    setIsDragging(false);
+  };
+
   const handleDisconnect = () => {
     triggerHaptic();
     motionControllerRef.current.stop();
@@ -141,6 +164,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     }
     setStatus('idle');
     setInputCode('');
+    setIsDragging(false);
   };
 
   const scrollStartPos = useRef<number | null>(null);
@@ -157,14 +181,36 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     socketRef.current?.sendScroll(dy * 2);
   };
 
-  // STEP 1: Controller Initial Screen (Section 8 Specs)
+  // STEP 1: Controller Initial Screen
   if (status !== 'connected') {
     return (
       <div className="controller-page">
         <div className="pairing-container glass-card">
           <h1 className="brand-header-logo">AIRCURSOR</h1>
-          <h2 className="pairing-title">Connect to a screen</h2>
-          <p className="pairing-label">Enter pairing code</p>
+          <h2 className="pairing-title">Pair with a target device</h2>
+          
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '1.25rem', justifyContent: 'center' }}>
+            <button
+              className={`tab-btn ${targetDeviceType === 'screen' ? 'active' : ''}`}
+              onClick={() => setTargetDeviceType('screen')}
+              style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+            >
+              <Monitor size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+              Browser Screen
+            </button>
+            <button
+              className={`tab-btn ${targetDeviceType === 'desktop' ? 'active' : ''}`}
+              onClick={() => setTargetDeviceType('desktop')}
+              style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+            >
+              <Laptop size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+              Windows PC
+            </button>
+          </div>
+
+          <p className="pairing-label">
+            {targetDeviceType === 'desktop' ? 'Enter code from AirCursor Desktop' : 'Enter pairing code from browser screen'}
+          </p>
 
           <div className="code-input-form">
             <input
@@ -182,7 +228,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
               className="btn-primary btn-large"
               onClick={() => connectToSession()}
             >
-              <Zap size={20} /> CONNECT
+              <Zap size={20} /> CONNECT TO {targetDeviceType === 'desktop' ? 'WINDOWS PC' : 'SCREEN'}
             </button>
 
             <button className="btn-secondary btn-large" onClick={() => {}}>
@@ -198,7 +244,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     );
   }
 
-  // STEP 2: Motion Permission Prompt (Section 13 Specs)
+  // STEP 2: Motion Permission Prompt
   if (hasPermission === false || hasPermission === null) {
     return (
       <div className="controller-page">
@@ -219,7 +265,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     );
   }
 
-  // STEP 3: Active Connected Controller (Sections 14, 15, 16 Specs)
+  // STEP 3: Active Connected Controller
   return (
     <div className="controller-page">
       <div className="active-controller">
@@ -234,15 +280,19 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
         {/* Connected Info Box */}
         <div className="connected-info-box">
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>CONNECTED</div>
-            <div className="target-device-name">{getFriendlyDeviceLabel('screen')}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>CONNECTED TO</div>
+            <div className="target-device-name">
+              {targetDeviceType === 'desktop' ? 'Windows PC (Real Cursor)' : getFriendlyDeviceLabel('screen')}
+            </div>
           </div>
           <div className="pulse-badge">
             <span className="pulse-dot" /> Connected
           </div>
         </div>
 
-        <p className="controller-instruction-text">Hold your phone naturally.</p>
+        <p className="controller-instruction-text">
+          {targetDeviceType === 'desktop' ? 'Move your phone to control the real Windows mouse.' : 'Hold your phone naturally.'}
+        </p>
 
         {/* Calibration Toast Feedback */}
         {isCalibratedToast && (
@@ -253,10 +303,30 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
 
         {/* Large One-Handed Touch Motion Controls */}
         <div className="motion-controls-wrapper">
-          {/* CALIBRATE Button */}
-          <button className="calibrate-large-btn" onClick={handleCalibrate}>
-            <Compass size={28} /> CALIBRATE
-          </button>
+          {/* CALIBRATE & EMERGENCY STOP ROW */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', marginBottom: '10px' }}>
+            <button className="calibrate-large-btn" onClick={handleCalibrate} style={{ width: '100%', margin: 0 }}>
+              <Compass size={22} /> CALIBRATE
+            </button>
+            <button
+              onClick={handleEmergencyStop}
+              style={{
+                background: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <ShieldAlert size={20} /> STOP
+            </button>
+          </div>
 
           {/* Sensitivity Slider */}
           <div className="sensitivity-card">
@@ -281,6 +351,14 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
 
             <div className="right-click-huge-btn" onClick={handleRightClick}>
               <span>RIGHT CLICK</span>
+            </div>
+
+            <div
+              className={`right-click-huge-btn ${isDragging ? 'active-drag' : ''}`}
+              onClick={handleToggleDrag}
+              style={{ background: isDragging ? 'var(--accent-primary)' : 'var(--bg-glass-card)' }}
+            >
+              <span>{isDragging ? 'RELEASE DRAG' : 'DRAG / HOLD'}</span>
             </div>
 
             <div

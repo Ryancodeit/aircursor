@@ -127,8 +127,8 @@ export class AirCursorSocketClient implements INetworkTransport {
     }
   }
 
-  public createSession() {
-    this.send({ type: 'create_session' });
+  public createSession(deviceType: 'screen' | 'desktop' = 'screen') {
+    this.send({ type: 'create_session', deviceType });
   }
 
   public joinSession(sessionCode: string) {
@@ -149,6 +149,30 @@ export class AirCursorSocketClient implements INetworkTransport {
 
   public sendDoubleClick() {
     this.send({ type: 'double_click', timestamp: Date.now() });
+  }
+
+  public sendMouseDown(button: 'left' | 'right' | 'middle' = 'left') {
+    this.send({ type: 'mouse_down', button, timestamp: Date.now() });
+  }
+
+  public sendMouseUp(button: 'left' | 'right' | 'middle' = 'left') {
+    this.send({ type: 'mouse_up', button, timestamp: Date.now() });
+  }
+
+  public sendDragStart() {
+    this.send({ type: 'drag_start', timestamp: Date.now() });
+  }
+
+  public sendDragEnd() {
+    this.send({ type: 'drag_end', timestamp: Date.now() });
+  }
+
+  public sendCalibrate() {
+    this.send({ type: 'calibrate', timestamp: Date.now() });
+  }
+
+  public sendEmergencyStop() {
+    this.send({ type: 'emergency_stop', timestamp: Date.now() });
   }
 
   public sendScroll(dy: number) {

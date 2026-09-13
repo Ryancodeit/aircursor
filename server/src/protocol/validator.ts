@@ -27,7 +27,13 @@ export function validateIncomingWSMessage(data: Buffer | string): ValidationResu
       'click',
       'double_click',
       'right_click',
+      'mouse_down',
+      'mouse_up',
+      'drag_start',
+      'drag_end',
       'scroll',
+      'calibrate',
+      'emergency_stop',
       'ping',
       'disconnect',
     ];
@@ -36,10 +42,10 @@ export function validateIncomingWSMessage(data: Buffer | string): ValidationResu
       return { valid: false, error: `Invalid message type: ${type}` };
     }
 
-    // Motion numeric validation
+    // Motion numeric validation & strict finite/NaN checks
     if (type === 'motion') {
-      if (typeof parsed.dx !== 'number' || typeof parsed.dy !== 'number' || !isFinite(parsed.dx) || !isFinite(parsed.dy)) {
-        return { valid: false, error: 'Invalid motion dx/dy coordinates' };
+      if (typeof parsed.dx !== 'number' || typeof parsed.dy !== 'number' || !isFinite(parsed.dx) || !isFinite(parsed.dy) || isNaN(parsed.dx) || isNaN(parsed.dy)) {
+        return { valid: false, error: 'Invalid motion dx/dy coordinates: NaN or non-finite' };
       }
       // Clamp extreme coordinate values to prevent overflow attacks
       parsed.dx = Math.min(Math.max(-200, parsed.dx), 200);
@@ -48,10 +54,17 @@ export function validateIncomingWSMessage(data: Buffer | string): ValidationResu
 
     // Scroll validation
     if (type === 'scroll') {
-      if (typeof parsed.dy !== 'number' || !isFinite(parsed.dy)) {
+      if (typeof parsed.dy !== 'number' || !isFinite(parsed.dy) || isNaN(parsed.dy)) {
         return { valid: false, error: 'Invalid scroll dy value' };
       }
       parsed.dy = Math.min(Math.max(-500, parsed.dy), 500);
+    }
+
+    // Mouse button validation
+    if (type === 'mouse_down' || type === 'mouse_up') {
+      if (parsed.button && !['left', 'right', 'middle'].includes(parsed.button)) {
+        return { valid: false, error: 'Invalid mouse button type' };
+      }
     }
 
     // Join session code validation
@@ -60,6 +73,13 @@ export function validateIncomingWSMessage(data: Buffer | string): ValidationResu
         return { valid: false, error: 'Invalid session code format' };
       }
       parsed.sessionCode = parsed.sessionCode.trim().toUpperCase();
+    }
+
+    // Create session device type validation
+    if (type === 'create_session') {
+      if (parsed.deviceType && !['screen', 'desktop'].includes(parsed.deviceType)) {
+        return { valid: false, error: 'Invalid device type specified' };
+      }
     }
 
     return { valid: true, message: parsed as WSMessage };

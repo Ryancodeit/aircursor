@@ -31,7 +31,7 @@ export function setupWebSocketServer(wss: WebSocketServer, sessionManager: Sessi
       if (role === 'controller' && room.screenSocket && room.screenSocket.readyState === WebSocket.OPEN) {
         sendJSON(room.screenSocket, { type: 'controller_disconnected' });
       } else if (role === 'screen' && room.controllerSocket && room.controllerSocket.readyState === WebSocket.OPEN) {
-        sendJSON(room.controllerSocket, { type: 'error', message: 'Target screen disconnected' });
+        sendJSON(room.controllerSocket, { type: 'error', message: 'Target device disconnected' });
       }
     });
 
@@ -51,11 +51,13 @@ function handleMessage(
 
   switch (msg.type) {
     case 'create_session': {
-      const { roomId, pairCode } = sessionManager.createRoom(socket, meta);
+      const deviceType = msg.deviceType || 'screen';
+      const { roomId, pairCode } = sessionManager.createRoom(socket, meta, deviceType);
       sendJSON(socket, {
         type: 'session_created',
         sessionId: roomId,
         pairingCode: pairCode,
+        deviceType,
       });
       break;
     }
@@ -73,11 +75,15 @@ function handleMessage(
       sendJSON(socket, {
         type: 'session_joined',
         sessionId: result.room.roomId,
+        targetDeviceType: result.room.targetDeviceType,
       });
 
       if (result.room.screenSocket && result.room.screenSocket.readyState === WebSocket.OPEN) {
         sendJSON(result.room.screenSocket, {
           type: 'controller_connected',
+          controllerMetadata: {
+            userAgent: meta.userAgent,
+          },
         });
       }
       break;
@@ -87,7 +93,13 @@ function handleMessage(
     case 'click':
     case 'double_click':
     case 'right_click':
-    case 'scroll': {
+    case 'mouse_down':
+    case 'mouse_up':
+    case 'drag_start':
+    case 'drag_end':
+    case 'scroll':
+    case 'calibrate':
+    case 'emergency_stop': {
       const entry = sessionManager.getRoomBySocket(socket);
       if (entry && entry.role === 'controller' && entry.room.screenSocket) {
         if (entry.room.screenSocket.readyState === WebSocket.OPEN) {
