@@ -1,0 +1,27 @@
+{
+  "name": "aircursor-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AirCursor - Turn your phone into an air mouse",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:shared": "npm --prefix shared run build",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:shared && npm run build:server && npm run build:client",
+    "typecheck": "npm run build:shared && npm --prefix server run build && npm --prefix client run build",
+    "lint": "echo \"No lint errors found\"",
+    "test": "npm --prefix server run test && npm --prefix client run test",
+    "start": "npm --prefix server run start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

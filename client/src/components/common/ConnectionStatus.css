@@ -1,0 +1,65 @@
+.connection-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all 0.25s ease;
+}
+
+.connection-status-badge.connected {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.connection-status-badge.connecting,
+.connection-status-badge.reconnecting {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.connection-status-badge.disconnected {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.connection-status-badge.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse-ring 1.8s infinite;
+}
+
+.status-dot.connecting,
+.status-dot.reconnecting {
+  background: #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
+  animation: pulse-ring 1.2s infinite;
+}
+
+.status-dot.disconnected {
+  background: #94a3b8;
+  border: 1.5px solid #94a3b8;
+}
+
+.status-dot.error {
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+}
