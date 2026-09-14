@@ -1,3 +1,5 @@
+import { MediaCommand } from './types.js';
+
 export type DeviceType = 'screen' | 'desktop';
 
 export type ClientMessageType =
@@ -14,6 +16,8 @@ export type ClientMessageType =
   | 'scroll'
   | 'calibrate'
   | 'emergency_stop'
+  | 'media_command'
+  | 'keyboard_input'
   | 'ping'
   | 'disconnect';
 
@@ -33,8 +37,11 @@ export type ServerMessageType =
   | 'scroll'
   | 'calibrate'
   | 'emergency_stop'
+  | 'media_command'
+  | 'keyboard_input'
   | 'error'
   | 'pong';
+
 
 export interface CreateSessionMessage {
   type: 'create_session';
@@ -130,6 +137,19 @@ export interface EmergencyStopMessage {
   timestamp: number;
 }
 
+export interface MediaCommandMessage {
+  type: 'media_command';
+  command: MediaCommand;
+  timestamp: number;
+}
+
+export interface KeyboardInputMessage {
+  type: 'keyboard_input';
+  key: string;
+  modifiers?: string[];
+  timestamp: number;
+}
+
 export interface PingMessage {
   type: 'ping';
   timestamp: number;
@@ -168,7 +188,10 @@ export type WSMessage =
   | ScrollMessage
   | CalibrateMessage
   | EmergencyStopMessage
+  | MediaCommandMessage
+  | KeyboardInputMessage
   | PingMessage
   | PongMessage
   | ErrorMessage
   | DisconnectMessage;
+

@@ -99,7 +99,9 @@ function handleMessage(
     case 'drag_end':
     case 'scroll':
     case 'calibrate':
-    case 'emergency_stop': {
+    case 'emergency_stop':
+    case 'media_command':
+    case 'keyboard_input': {
       const entry = sessionManager.getRoomBySocket(socket);
       if (entry && entry.role === 'controller' && entry.room.screenSocket) {
         if (entry.room.screenSocket.readyState === WebSocket.OPEN) {
@@ -108,6 +110,7 @@ function handleMessage(
       }
       break;
     }
+
 
     case 'ping': {
       sendJSON(socket, {

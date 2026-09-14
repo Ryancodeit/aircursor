@@ -155,7 +155,18 @@ namespace AirCursorDesktop.Core
                         int dyVal = root.GetProperty("dy").GetInt32();
                         _motionProcessor.ProcessAction("scroll", null, dyVal);
                         break;
+
+                    case "media_command":
+                        string? cmd = root.TryGetProperty("command", out var cProp) ? cProp.GetString() : null;
+                        if (cmd != null) _motionProcessor.ProcessMediaCommand(cmd);
+                        break;
+
+                    case "keyboard_input":
+                        string? k = root.TryGetProperty("key", out var kProp) ? kProp.GetString() : null;
+                        if (k != null) _motionProcessor.ProcessKeyboardInput(k);
+                        break;
                 }
+
             }
             catch (Exception ex)
             {

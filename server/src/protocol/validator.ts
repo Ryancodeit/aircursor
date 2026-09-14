@@ -34,6 +34,8 @@ export function validateIncomingWSMessage(data: Buffer | string): ValidationResu
       'scroll',
       'calibrate',
       'emergency_stop',
+      'media_command',
+      'keyboard_input',
       'ping',
       'disconnect',
     ];
@@ -41,6 +43,21 @@ export function validateIncomingWSMessage(data: Buffer | string): ValidationResu
     if (!validTypes.includes(type)) {
       return { valid: false, error: `Invalid message type: ${type}` };
     }
+
+    // Media command validation
+    if (type === 'media_command') {
+      if (typeof parsed.command !== 'string' || parsed.command.length > 50) {
+        return { valid: false, error: 'Invalid media command format' };
+      }
+    }
+
+    // Keyboard input validation
+    if (type === 'keyboard_input') {
+      if (typeof parsed.key !== 'string' || parsed.key.length > 50) {
+        return { valid: false, error: 'Invalid keyboard input format' };
+      }
+    }
+
 
     // Motion numeric validation & strict finite/NaN checks
     if (type === 'motion') {

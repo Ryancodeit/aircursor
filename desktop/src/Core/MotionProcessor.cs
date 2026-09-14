@@ -76,7 +76,20 @@ namespace AirCursorDesktop.Core
             }
         }
 
+        public void ProcessMediaCommand(string command)
+        {
+            if (!IsActive || IsEmergencyStopped || string.IsNullOrWhiteSpace(command)) return;
+            _mouse.ExecuteMediaCommand(command);
+        }
+
+        public void ProcessKeyboardInput(string key, string[]? modifiers = null)
+        {
+            if (!IsActive || IsEmergencyStopped || string.IsNullOrWhiteSpace(key)) return;
+            _mouse.ExecuteKeyboardInput(key, modifiers);
+        }
+
         public void TriggerEmergencyStop()
+
         {
             IsEmergencyStopped = true;
             IsActive = false;

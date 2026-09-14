@@ -1,30 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Smartphone,
-  Compass,
   ArrowLeft,
   Sliders,
   Zap,
-  MousePointer,
   LogOut,
-  Check,
-  ShieldAlert,
   Monitor,
   Laptop,
   X,
-  RefreshCw
+  ChevronRight
 } from 'lucide-react';
 import { AirCursorSocketClient } from '../networking/socketClient.js';
 import { MotionController } from '../motion/MotionController.js';
-import { getFriendlyDeviceLabel } from '../utils/deviceLabel.js';
 import { DebugPanel } from '../components/common/DebugPanel.js';
 import {
   loadUserPreferences,
   saveUserPreferences,
-  UserPreferences,
-  SENSITIVITY_PRESETS
+  UserPreferences
 } from '../utils/userPreferences.js';
-import { SessionStatus, DeviceType } from '@aircursor/shared';
+
+import { SessionStatus, DeviceType, ControlMode } from '@aircursor/shared';
+import { ModeSwitcherDock } from '../components/controller/ModeSwitcherDock.js';
+import { AirCursorMode } from '../components/controller/AirCursorMode.js';
+import { TouchpadMode } from '../components/controller/TouchpadMode.js';
+import { MediaMode } from '../components/controller/MediaMode.js';
+import { KeyboardMode } from '../components/controller/KeyboardMode.js';
 import './ControllerPage.css';
 
 interface ControllerPageProps {
@@ -40,9 +40,11 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
-  // Calibration UX state: 'idle' | 'calibrating' | 'ready'
+  // Active Control Mode State: 'aircursor' | 'touchpad' | 'media' | 'keyboard'
+  const [activeMode, setActiveMode] = useState<ControlMode>('aircursor');
+
+  // Calibration UX state
   const [calibStep, setCalibStep] = useState<'idle' | 'calibrating' | 'ready'>('idle');
-  const [isDragging, setIsDragging] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showDebug, setShowDebug] = useState<boolean>(false);
   const [motionActive, setMotionActive] = useState<boolean>(false);
@@ -77,10 +79,10 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
   useEffect(() => {
     const controller = motionControllerRef.current;
     const unsubscribe = controller.onMovement((dx, dy) => {
-      if (status === 'connected') {
+      // Only process phone motion sensor when in Air Cursor mode
+      if (status === 'connected' && activeMode === 'aircursor') {
         socketRef.current?.sendMotion(dx, dy);
 
-        // Visual feedback state
         setMotionActive(true);
         setMotionOffset({
           x: Math.max(-28, Math.min(28, dx * 1.5)),
@@ -100,18 +102,18 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
       controller.stop();
       if (motionDecayTimer.current) clearTimeout(motionDecayTimer.current);
     };
-  }, [status]);
+  }, [status, activeMode]);
 
   // Handle visibility state change (e.g. mobile screen lock / tab switch)
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && status === 'connected') {
+      if (document.visibilityState === 'visible' && status === 'connected' && activeMode === 'aircursor') {
         motionControllerRef.current.calibrate();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [status]);
+  }, [status, activeMode]);
 
   useEffect(() => {
     if (initialCode && initialCode.length === 6) {
@@ -199,35 +201,13 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
       setTimeout(() => {
         setCalibStep('idle');
       }, 1800);
-    }, 500);
-  };
-
-  const handleLeftClick = () => {
-    triggerHaptic(18);
-    socketRef.current?.sendClick();
-  };
-
-  const handleRightClick = () => {
-    triggerHaptic([15, 30]);
-    socketRef.current?.sendRightClick();
-  };
-
-  const handleToggleDrag = () => {
-    triggerHaptic(25);
-    if (isDragging) {
-      socketRef.current?.sendDragEnd();
-      setIsDragging(false);
-    } else {
-      socketRef.current?.sendDragStart();
-      setIsDragging(true);
-    }
+    }, 400);
   };
 
   const handleEmergencyStop = () => {
     triggerHaptic([40, 40, 40]);
     socketRef.current?.sendEmergencyStop();
     motionControllerRef.current.calibrate();
-    setIsDragging(false);
   };
 
   const handleDisconnect = () => {
@@ -239,31 +219,6 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     }
     setStatus('idle');
     setInputCode('');
-    setIsDragging(false);
-  };
-
-  const scrollStartPos = useRef<number | null>(null);
-  const handleScrollStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      scrollStartPos.current = e.touches[0].clientY;
-    }
-  };
-
-  const handleScrollMove = (e: React.TouchEvent) => {
-    if (scrollStartPos.current === null || e.touches.length === 0) return;
-    const dy = e.touches[0].clientY - scrollStartPos.current;
-    scrollStartPos.current = e.touches[0].clientY;
-    socketRef.current?.sendScroll(dy * 2.2);
-  };
-
-  const updatePreset = (presetKey: 'low' | 'medium' | 'high') => {
-    triggerHaptic(12);
-    const targetGain = SENSITIVITY_PRESETS[presetKey];
-    setPrefs((prev) => ({
-      ...prev,
-      sensitivityPreset: presetKey,
-      sensitivity: targetGain
-    }));
   };
 
   // STEP 1: Controller Initial Pairing Screen
@@ -278,6 +233,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
             <button
               className={`tab-btn ${targetDeviceType === 'screen' ? 'active' : ''}`}
               onClick={() => setTargetDeviceType('screen')}
+              type="button"
             >
               <Monitor size={15} />
               Browser Screen
@@ -285,6 +241,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
             <button
               className={`tab-btn ${targetDeviceType === 'desktop' ? 'active' : ''}`}
               onClick={() => setTargetDeviceType('desktop')}
+              type="button"
             >
               <Laptop size={15} />
               Windows PC
@@ -312,6 +269,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
             <button
               className="btn-primary btn-large"
               onClick={() => connectToSession()}
+              type="button"
               style={{
                 height: '54px',
                 fontSize: '1.05rem',
@@ -329,6 +287,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
             <button
               className="btn-secondary"
               onClick={onBack}
+              type="button"
               style={{
                 height: '46px',
                 borderRadius: '12px',
@@ -363,6 +322,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
           <button
             className="btn-primary btn-large"
             onClick={requestMotionAccess}
+            type="button"
             style={{ height: '54px', borderRadius: '14px', fontWeight: 700 }}
           >
             ACTIVATE MOTION SENSORS
@@ -372,154 +332,83 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
     );
   }
 
-  // STEP 3: Active Connected Remote Controller Screen (390x844 Viewport Optimized)
+  // STEP 3: Fullscreen Universal Multi-Mode Remote Shell
   return (
-    <div className="controller-page">
-      <div className="active-controller">
-        {/* 1. TOP BAR & STATUS */}
-        <div className="controller-header-bar">
-          <div className="header-brand">
-            <span className="brand-text">AIRCURSOR</span>
-            <div className={`status-badge ${status}`}>
-              <span className="pulse-dot" />
-              {status === 'connected' ? 'CONNECTED' : status.toUpperCase()}
-            </div>
+    <div className="controller-page fullscreen-remote-shell">
+      {/* 1. MINIMAL TOP BAR HEADER */}
+      <header className="remote-top-header">
+        <div className="header-left">
+          <div className="app-brand-badge">
+            <span className="brand-icon">▲</span>
+            <span className="brand-title">AirCursor</span>
           </div>
-
-          <div className="header-actions">
-            <button
-              className="icon-btn"
-              onClick={() => setShowSettings(true)}
-              title="Settings"
-            >
-              <Sliders size={18} />
-            </button>
-            <button
-              className="icon-btn"
-              onClick={handleDisconnect}
-              title="Disconnect"
-              style={{ color: '#f87171' }}
-            >
-              <LogOut size={16} />
-            </button>
+          <div className={`status-dot-pill ${status}`}>
+            <span className="dot" />
+            <span className="status-text">{status === 'connected' ? 'Connected' : status.toUpperCase()}</span>
           </div>
         </div>
 
-        {/* 2. TARGET & SESSION PILL */}
-        <div className="target-info-pill">
-          <span>
-            Target:{' '}
-            <strong style={{ color: '#ffffff' }}>
-              {targetDeviceType === 'desktop' ? 'Windows PC (Native Mouse)' : getFriendlyDeviceLabel('screen')}
-            </strong>
-          </span>
-          {inputCode && <span className="session-code-tag">#{inputCode}</span>}
+        <div className="header-right">
+          <button className="icon-circle-btn" onClick={() => setShowSettings(true)} title="Settings" type="button">
+            <Sliders size={17} />
+          </button>
+          <button className="icon-circle-btn danger" onClick={handleDisconnect} title="Disconnect" type="button">
+            <LogOut size={15} />
+          </button>
         </div>
+      </header>
 
-        {/* 3. COMPACT MOTION VISUALIZER SURFACE */}
-        <div className={`motion-surface-card ${motionActive ? 'moving' : ''}`}>
-          {calibStep !== 'idle' ? (
-            <div className="calibration-banner">
-              {calibStep === 'calibrating' && (
-                <>
-                  <RefreshCw size={24} style={{ color: '#6366f1', animation: 'spin 1s linear infinite' }} />
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Calibrating position...</div>
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Hold phone steady</div>
-                </>
-              )}
-              {calibStep === 'ready' && (
-                <>
-                  <Check size={28} style={{ color: '#34d399' }} />
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#34d399' }}>Ready ✓</div>
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Reference zero saved</div>
-                </>
-              )}
-            </div>
-          ) : null}
-
-          <div className="motion-surface-ring">
-            <div
-              className="motion-origin-dot"
-              style={{
-                transform: `translate3d(${motionOffset.x}px, ${motionOffset.y}px, 0)`
-              }}
-            />
-          </div>
-
-          <div className="motion-guide-text">
-            {motionActive ? 'Moving Cursor...' : 'Move your phone to control the cursor'}
-          </div>
-          <div className="motion-sub-text">
-            Hold phone naturally • Tap Calibrate to zero
-          </div>
+      {/* Target Device Tag */}
+      <div className="target-device-bar">
+        <div className="target-device-info">
+          {targetDeviceType === 'desktop' ? <Laptop size={14} /> : <Monitor size={14} />}
+          <span>{targetDeviceType === 'desktop' ? 'Windows PC' : 'Browser Screen'}</span>
         </div>
-
-        {/* 4. SETUP ROW: PRIMARY CALIBRATE + COMPACT EMERGENCY STOP */}
-        <div className="bottom-controls-wrapper">
-          <div className="top-control-row">
-            <button className="calibrate-primary-btn" onClick={handleCalibrate}>
-              <Compass size={18} /> CALIBRATE
-            </button>
-            <button className="stop-emergency-btn" onClick={handleEmergencyStop} title="Emergency stop drag & reset motion">
-              <ShieldAlert size={16} /> STOP
-            </button>
-          </div>
-
-          {/* 5. SPEED PRESETS BAR */}
-          <div className="sensitivity-preset-bar">
-            <span className="sensitivity-label">Speed</span>
-            <div className="preset-pills">
-              <button
-                className={`preset-pill ${prefs.sensitivityPreset === 'low' ? 'active' : ''}`}
-                onClick={() => updatePreset('low')}
-              >
-                LOW
-              </button>
-              <button
-                className={`preset-pill ${prefs.sensitivityPreset === 'medium' ? 'active' : ''}`}
-                onClick={() => updatePreset('medium')}
-              >
-                MED
-              </button>
-              <button
-                className={`preset-pill ${prefs.sensitivityPreset === 'high' ? 'active' : ''}`}
-                onClick={() => updatePreset('high')}
-              >
-                HIGH
-              </button>
-            </div>
-          </div>
-
-          {/* 6. PRIMARY & SECONDARY ACTION GRID */}
-          <div className="action-grid">
-            <div className="click-card" onClick={handleLeftClick}>
-              <MousePointer size={28} />
-              <span>CLICK</span>
-            </div>
-
-            <div className="right-click-card" onClick={handleRightClick}>
-              <span>RIGHT CLICK</span>
-            </div>
-
-            <div
-              className={`drag-toggle-card ${isDragging ? 'active-drag' : ''}`}
-              onClick={handleToggleDrag}
-            >
-              <span>{isDragging ? 'DRAG HELD' : 'DRAG / HOLD'}</span>
-              {isDragging && <span style={{ fontSize: '0.65rem', opacity: 0.9 }}>TAP TO RELEASE</span>}
-            </div>
-          </div>
-
-          {/* 7. SCROLL TOUCH ZONE */}
-          <div
-            className="scroll-zone-bar"
-            onTouchStart={handleScrollStart}
-            onTouchMove={handleScrollMove}
-          >
-            <span>▲ DRAG UP / DOWN TO SCROLL ▼</span>
-          </div>
-        </div>
+        <ChevronRight size={14} style={{ opacity: 0.5 }} />
       </div>
+
+      {/* 2. DYNAMIC FULLSCREEN MODE SURFACE */}
+      <main className="active-mode-surface">
+        {activeMode === 'aircursor' && (
+          <AirCursorMode
+            socketClient={socketRef.current}
+            onCalibrate={handleCalibrate}
+            onEmergencyStop={handleEmergencyStop}
+            triggerHaptic={triggerHaptic}
+            calibStep={calibStep}
+            motionActive={motionActive}
+            motionOffset={motionOffset}
+          />
+        )}
+
+        {activeMode === 'touchpad' && (
+          <TouchpadMode
+            socketClient={socketRef.current}
+            triggerHaptic={triggerHaptic}
+          />
+        )}
+
+        {activeMode === 'media' && (
+          <MediaMode
+            socketClient={socketRef.current}
+            triggerHaptic={triggerHaptic}
+          />
+        )}
+
+        {activeMode === 'keyboard' && (
+          <KeyboardMode
+            socketClient={socketRef.current}
+            triggerHaptic={triggerHaptic}
+          />
+        )}
+      </main>
+
+      {/* 3. PERSISTENT MODE SWITCHER DOCK */}
+      <ModeSwitcherDock
+        activeMode={activeMode}
+        onSelectMode={(mode) => setActiveMode(mode)}
+        triggerHaptic={triggerHaptic}
+      />
 
       {/* SETTINGS DRAWER MODAL */}
       {showSettings && (
@@ -527,7 +416,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
           <div className="settings-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <span className="drawer-title">Remote Settings</span>
-              <button className="icon-btn" onClick={() => setShowSettings(false)}>
+              <button className="icon-circle-btn" onClick={() => setShowSettings(false)} type="button">
                 <X size={18} />
               </button>
             </div>
@@ -590,34 +479,6 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
               </div>
             </div>
 
-            {/* Invert Horizontal Switch */}
-            <div className="setting-row">
-              <div className="setting-info">
-                <span className="setting-name">Invert Horizontal</span>
-                <span className="setting-desc">Reverse left/right cursor motion</span>
-              </div>
-              <div
-                className={`toggle-switch ${prefs.invertX ? 'on' : ''}`}
-                onClick={() => setPrefs((prev) => ({ ...prev, invertX: !prev.invertX }))}
-              >
-                <div className="toggle-knob" />
-              </div>
-            </div>
-
-            {/* Invert Vertical Switch */}
-            <div className="setting-row">
-              <div className="setting-info">
-                <span className="setting-name">Invert Vertical</span>
-                <span className="setting-desc">Reverse up/down cursor motion</span>
-              </div>
-              <div
-                className={`toggle-switch ${prefs.invertY ? 'on' : ''}`}
-                onClick={() => setPrefs((prev) => ({ ...prev, invertY: !prev.invertY }))}
-              >
-                <div className="toggle-knob" />
-              </div>
-            </div>
-
             {/* Haptic Feedback Switch */}
             <div className="setting-row">
               <div className="setting-info">
@@ -635,6 +496,7 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
             <button
               className="btn-primary"
               onClick={() => setShowSettings(false)}
+              type="button"
               style={{ height: '46px', borderRadius: '12px', marginTop: '0.25rem', fontWeight: 700 }}
             >
               SAVE & CLOSE

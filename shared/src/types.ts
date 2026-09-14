@@ -29,6 +29,20 @@ export interface MotionDataPayload {
   timestamp: number;
 }
 
+export type ControlMode = 'aircursor' | 'touchpad' | 'media' | 'keyboard';
+
+export type MediaCommand =
+  | 'play_pause'
+  | 'next'
+  | 'previous'
+  | 'volume_up'
+  | 'volume_down'
+  | 'mute'
+  | 'seek_forward'
+  | 'seek_backward'
+  | 'stop'
+  | 'fullscreen';
+
 export type ActionType =
   | 'click_down'
   | 'click_up'
@@ -43,13 +57,18 @@ export type ActionType =
   | 'calibrate'
   | 'emergency_stop'
   | 'laser_toggle'
-  | 'mode_change';
+  | 'mode_change'
+  | 'media_command'
+  | 'keyboard_input';
 
 export interface CursorActionPayload {
   type: ActionType;
   deltaY?: number; // for scroll
   button?: 'left' | 'right' | 'middle';
   mode?: 'cursor' | 'laser' | 'presentation';
+  mediaCommand?: MediaCommand;
+  key?: string;
+  modifiers?: string[];
   timestamp: number;
 }
 
@@ -57,3 +76,4 @@ export interface LatencyData {
   pingMs: number;
   lastPong: number;
 }
+

@@ -61,6 +61,19 @@ namespace AirCursorDesktop.Core
             ScrollDeltaTotal += deltaY;
         }
 
+        public string? LastMediaCommand { get; private set; }
+        public string? LastKey { get; private set; }
+
+        public void ExecuteMediaCommand(string command)
+        {
+            LastMediaCommand = command;
+        }
+
+        public void ExecuteKeyboardInput(string key, string[]? modifiers = null)
+        {
+            LastKey = key;
+        }
+
         public void EmergencyStop()
         {
             IsLeftHeld = false;
@@ -69,3 +82,4 @@ namespace AirCursorDesktop.Core
         }
     }
 }
+

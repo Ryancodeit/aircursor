@@ -179,6 +179,15 @@ export class AirCursorSocketClient implements INetworkTransport {
     this.send({ type: 'scroll', dy, timestamp: Date.now() });
   }
 
+  public sendMediaCommand(command: any) {
+    this.send({ type: 'media_command', command, timestamp: Date.now() });
+  }
+
+  public sendKeyboardInput(key: string, modifiers?: string[]) {
+    this.send({ type: 'keyboard_input', key, modifiers, timestamp: Date.now() });
+  }
+
+
   private startPingPong() {
     this.stopPingPong();
     this.pingInterval = window.setInterval(() => {

@@ -13,7 +13,10 @@ namespace AirCursorDesktop.Core
         void MiddleUp();
         void Scroll(int deltaY);
         void EmergencyStop();
+        void ExecuteMediaCommand(string command);
+        void ExecuteKeyboardInput(string key, string[]? modifiers = null);
         bool IsLeftHeld { get; }
         bool IsRightHeld { get; }
     }
 }
+
