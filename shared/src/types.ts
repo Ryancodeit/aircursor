@@ -2,7 +2,7 @@ export type ClientRole = 'screen' | 'controller' | 'desktop';
 
 export type TargetDeviceMode = 'screen' | 'desktop';
 
-export type SessionStatus = 'idle' | 'waiting_for_controller' | 'connected' | 'disconnected' | 'error';
+export type SessionStatus = 'idle' | 'waiting_for_controller' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
 export interface RoomSession {
   roomId: string;

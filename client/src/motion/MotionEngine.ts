@@ -64,10 +64,23 @@ export class MotionEngine {
 
   public setSmoothing(value: number): void {
     this.filter.alpha = value;
+    this.filter.adaptiveSmoothing = false;
   }
 
   public setDeadZone(value: number): void {
     this.filter.deadband = value;
+  }
+
+  public setInvertX(value: boolean): void {
+    this.filter.invertX = value;
+  }
+
+  public setInvertY(value: boolean): void {
+    this.filter.invertY = value;
+  }
+
+  public setAdaptiveSmoothing(value: boolean): void {
+    this.filter.adaptiveSmoothing = value;
   }
 
   public onMotion(listener: MotionListener): () => void {

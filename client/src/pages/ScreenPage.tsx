@@ -164,8 +164,8 @@ export const ScreenPage: React.FC<ScreenPageProps> = ({ onBack }) => {
       {status !== 'connected' ? (
         /* Waiting State View matching Section 7 Specs */
         <main className="screen-waiting-hero glass-card">
-          <h1 className="screen-hero-title">Your screen is ready.</h1>
-          <p className="screen-hero-subtitle">Scan the QR code with your phone</p>
+          <h1 className="screen-hero-title">Connect your phone to control this screen.</h1>
+          <p className="screen-hero-subtitle">Scan the QR code with your phone camera</p>
 
           <div className="qr-wrapper-card">
             {joinUrl && (
@@ -201,7 +201,7 @@ export const ScreenPage: React.FC<ScreenPageProps> = ({ onBack }) => {
           <div className="connected-banner-bar">
             <span>
               <Smartphone size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
-              <strong>Controller connected.</strong> Move your phone to control the cursor.
+              <strong>Phone controller ready.</strong> Move your phone to control the cursor.
             </span>
           </div>
 

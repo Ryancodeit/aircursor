@@ -39,4 +39,14 @@ describe('Section 51: CursorEngine API Unit Tests', () => {
     expect(engine.getPosition().x).toBeLessThanOrEqual(790);
     expect(engine.getPosition().y).toBeLessThanOrEqual(590);
   });
+
+  it('should ignore NaN values gracefully in move and setPosition', () => {
+    const initialPos = engine.getPosition();
+    engine.move(NaN, 10);
+    expect(engine.getPosition()).toEqual(initialPos);
+
+    engine.setPosition(NaN, NaN);
+    expect(isNaN(engine.getPosition().x)).toBe(false);
+    expect(isNaN(engine.getPosition().y)).toBe(false);
+  });
 });
