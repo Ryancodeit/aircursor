@@ -100,18 +100,44 @@ export function useVirtualCursor() {
           break;
         case 'scroll': {
           const { x, y } = engineRef.current.getPosition();
-          const targetEl = document.elementFromPoint(x, y) || window;
+          const targetEl = (document.elementFromPoint(x, y) || document.documentElement) as HTMLElement;
+          const dyAmount = (msg.dy || 0) * 3;
           targetEl.dispatchEvent(
             new WheelEvent('wheel', {
               bubbles: true,
               cancelable: true,
-              deltaY: (msg.dy || 0) * 3,
+              deltaY: dyAmount,
               clientX: x,
               clientY: y,
             })
           );
+          if (targetEl && typeof targetEl.scrollBy === 'function') {
+            targetEl.scrollBy({ top: dyAmount, behavior: 'auto' });
+          } else if (window) {
+            window.scrollBy({ top: dyAmount, behavior: 'auto' });
+          }
           break;
         }
+
+        case 'keyboard_input': {
+          if (!msg.key) break;
+          const activeEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+          if (activeEl && ('value' in activeEl)) {
+            if (msg.key === 'BACKSPACE') {
+              activeEl.value = activeEl.value.slice(0, -1);
+            } else if (msg.key === 'SPACE') {
+              activeEl.value += ' ';
+            } else if (msg.key.length === 1) {
+              activeEl.value += msg.key;
+            }
+            activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+          } else {
+            // Dispatch keyboard event to window
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: msg.key, bubbles: true }));
+          }
+          break;
+        }
+
       }
     },
     [moveCursor, triggerDOMClick]

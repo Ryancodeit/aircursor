@@ -224,10 +224,11 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
   // STEP 1: Controller Initial Pairing Screen
   if (status !== 'connected' && status !== 'reconnecting') {
     return (
-      <div className="controller-page">
+      <div className="controller-page pairing-mode">
         <div className="pairing-container glass-card">
           <h1 className="brand-header-logo">AIRCURSOR</h1>
           <h2 className="pairing-title">Pair phone controller</h2>
+
 
           <div className="device-tab-bar">
             <button
@@ -309,8 +310,9 @@ export const ControllerPage: React.FC<ControllerPageProps> = ({ initialCode = ''
   // STEP 2: Motion Permission Prompt
   if (hasPermission === false || hasPermission === null) {
     return (
-      <div className="controller-page">
+      <div className="controller-page pairing-mode">
         <div className="pairing-container glass-card">
+
           <Smartphone size={48} style={{ color: '#818cf8', marginBottom: '1rem' }} />
           <h2>Enable Motion Control</h2>
           <p style={{ color: '#94a3b8', marginBottom: '1.5rem', lineHeight: '1.5', fontSize: '0.92rem' }}>

@@ -89,48 +89,56 @@ export const AirCursorMode: React.FC<AirCursorModeProps> = ({
 
   return (
     <div className="aircursor-mode-container">
-      {/* Central Motion Area Visualizer */}
-      <div className={`motion-surface-card ${motionActive ? 'moving' : ''}`}>
-        {calibStep !== 'idle' && (
-          <div className="calibration-banner">
-            {calibStep === 'calibrating' && (
-              <>
-                <RefreshCw size={22} className="spin-icon" />
-                <span style={{ fontWeight: 700 }}>Calibrating position...</span>
-              </>
-            )}
-            {calibStep === 'ready' && (
-              <>
-                <Check size={24} style={{ color: '#34d399' }} />
-                <span style={{ fontWeight: 700, color: '#34d399' }}>Ready ✓</span>
-              </>
-            )}
+      {/* Central Motion Area & Right-Side Vertical Scroll Wheel Container */}
+      <div className="aircursor-surface-row">
+        <div className={`motion-surface-card ${motionActive ? 'moving' : ''}`}>
+          {calibStep !== 'idle' && (
+            <div className="calibration-banner">
+              {calibStep === 'calibrating' && (
+                <>
+                  <RefreshCw size={22} className="spin-icon" />
+                  <span style={{ fontWeight: 700 }}>Calibrating position...</span>
+                </>
+              )}
+              {calibStep === 'ready' && (
+                <>
+                  <Check size={24} style={{ color: '#34d399' }} />
+                  <span style={{ fontWeight: 700, color: '#34d399' }}>Ready ✓</span>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="motion-surface-ring">
+            <div
+              className="motion-origin-dot"
+              style={{
+                transform: `translate3d(${motionOffset.x}px, ${motionOffset.y}px, 0)`
+              }}
+            />
           </div>
-        )}
 
-        <div className="motion-surface-ring">
-          <div
-            className="motion-origin-dot"
-            style={{
-              transform: `translate3d(${motionOffset.x}px, ${motionOffset.y}px, 0)`
-            }}
-          />
+          <div className="motion-guide-text">
+            {motionActive ? 'Moving Cursor...' : 'Move your phone to control cursor'}
+          </div>
+          <div className="motion-sub-text">Air Mouse Mode</div>
         </div>
 
-        <div className="motion-guide-text">
-          {motionActive ? 'Moving Cursor...' : 'Move your phone to control the cursor'}
+        {/* Tall Vertical Scroll Wheel on the Right Side */}
+        <div
+          className="vertical-right-scroll 3d-surface"
+          onTouchStart={handleScrollStart}
+          onTouchMove={handleScrollMove}
+          onTouchEnd={handleScrollEnd}
+          onTouchCancel={handleScrollEnd}
+          title="Thumb Scroll Wheel (Swipe Up / Down)"
+        >
+          <div className="scroll-arrow">▲</div>
+          <div className="vertical-scroll-ridges" />
+          <div className="scroll-dot-indicator">●</div>
+          <div className="vertical-scroll-ridges" />
+          <div className="scroll-arrow">▼</div>
         </div>
-        <div className="motion-sub-text">Air Mouse Mode</div>
-      </div>
-
-      {/* Secondary Controls Bar (Calibrate + Emergency Stop) */}
-      <div className="aircursor-action-row">
-        <button className="calibrate-primary-btn" onClick={onCalibrate} type="button">
-          <Compass size={17} /> CALIBRATE
-        </button>
-        <button className="stop-emergency-btn" onClick={onEmergencyStop} type="button">
-          <ShieldAlert size={16} /> STOP
-        </button>
       </div>
 
       {/* Realistic 3D Mouse Buttons */}
@@ -143,7 +151,7 @@ export const AirCursorMode: React.FC<AirCursorModeProps> = ({
           onPointerCancel={handleLeftUp}
           type="button"
         >
-          <MousePointer size={22} />
+          <MousePointer size={20} />
           <span className="btn-label">{isLeftHeld ? 'DRAG HELD' : 'Left Click'}</span>
           {isLeftHeld && <span className="hold-badge">HOLDING</span>}
         </button>
@@ -156,26 +164,21 @@ export const AirCursorMode: React.FC<AirCursorModeProps> = ({
           onPointerCancel={handleRightUp}
           type="button"
         >
-          <MousePointer size={22} style={{ transform: 'scaleX(-1)' }} />
+          <MousePointer size={20} style={{ transform: 'scaleX(-1)' }} />
           <span className="btn-label">{isRightHeld ? 'RIGHT HELD' : 'Right Click'}</span>
         </button>
       </div>
 
-      {/* Wide 3D Scroll Control Wheel */}
-      <div
-        className="wide-scroll-wheel-container 3d-surface"
-        onTouchStart={handleScrollStart}
-        onTouchMove={handleScrollMove}
-        onTouchEnd={handleScrollEnd}
-        onTouchCancel={handleScrollEnd}
-      >
-        <div className="scroll-texture-ridges" />
-        <div className="scroll-wheel-label">
-          <span>‹</span>
-          <span>Wide Scroll Surface (Swipe Up / Down)</span>
-          <span>›</span>
-        </div>
+      {/* Secondary Controls Bar (Calibrate + Emergency Stop) */}
+      <div className="aircursor-action-row">
+        <button className="calibrate-primary-btn" onClick={onCalibrate} type="button">
+          <Compass size={16} /> CALIBRATE
+        </button>
+        <button className="stop-emergency-btn" onClick={onEmergencyStop} type="button">
+          <ShieldAlert size={15} /> STOP
+        </button>
       </div>
     </div>
   );
 };
+

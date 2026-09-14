@@ -147,12 +147,16 @@ namespace AirCursorDesktop.Core
                     case "calibrate":
                     case "emergency_stop":
                         string? button = root.TryGetProperty("button", out var b) ? b.GetString() : null;
-                        int? scrollDy = root.TryGetProperty("dy", out var s) ? s.GetInt32() : null;
+                        int? scrollDy = root.TryGetProperty("dy", out var s) ? (int)Math.Round(s.GetDouble()) : null;
                         _motionProcessor.ProcessAction(messageType, button, scrollDy);
                         break;
 
                     case "scroll":
-                        int dyVal = root.GetProperty("dy").GetInt32();
+                        int dyVal = 0;
+                        if (root.TryGetProperty("dy", out var dyProp))
+                        {
+                            dyVal = (int)Math.Round(dyProp.GetDouble());
+                        }
                         _motionProcessor.ProcessAction("scroll", null, dyVal);
                         break;
 
@@ -163,8 +167,19 @@ namespace AirCursorDesktop.Core
 
                     case "keyboard_input":
                         string? k = root.TryGetProperty("key", out var kProp) ? kProp.GetString() : null;
-                        if (k != null) _motionProcessor.ProcessKeyboardInput(k);
+                        string[]? modifiers = null;
+                        if (root.TryGetProperty("modifiers", out var modsProp) && modsProp.ValueKind == JsonValueKind.Array)
+                        {
+                            var list = new System.Collections.Generic.List<string>();
+                            foreach (var elem in modsProp.EnumerateArray())
+                            {
+                                if (elem.GetString() is string modStr) list.Add(modStr);
+                            }
+                            modifiers = list.ToArray();
+                        }
+                        if (k != null) _motionProcessor.ProcessKeyboardInput(k, modifiers);
                         break;
+
                 }
 
             }

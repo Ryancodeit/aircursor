@@ -239,7 +239,10 @@ namespace AirCursorDesktop.Core
         {
             try
             {
+                if (string.IsNullOrEmpty(key)) return;
+
                 byte vk = 0;
+                bool needsShift = false;
                 string upperKey = key.ToUpperInvariant();
 
                 switch (upperKey)
@@ -252,12 +255,46 @@ namespace AirCursorDesktop.Core
                     case "CTRL": case "CONTROL": vk = 0x11; break;
                     case "ALT": vk = 0x12; break;
                     case "WIN": case "SUPER": vk = 0x5B; break;
+                    case "LEFT": case "ARROWLEFT": vk = 0x25; break;
+                    case "UP": case "ARROWUP": vk = 0x26; break;
+                    case "RIGHT": case "ARROWRIGHT": vk = 0x27; break;
+                    case "DOWN": case "ARROWDOWN": vk = 0x28; break;
+                    case ".": vk = 0xBE; break; // VK_OEM_PERIOD
+                    case ",": vk = 0xBC; break; // VK_OEM_COMMA
+                    case "-": vk = 0xBD; break; // VK_OEM_MINUS
+                    case "/": vk = 0xBF; break; // VK_OEM_2
+                    case ";": vk = 0xBA; break; // VK_OEM_1
+                    case ":": vk = 0xBA; needsShift = true; break;
+                    case "?": vk = 0xBF; needsShift = true; break;
+                    case "!": vk = 0x31; needsShift = true; break;
+                    case "@": vk = 0x32; needsShift = true; break;
+                    case "#": vk = 0x33; needsShift = true; break;
+                    case "$": vk = 0x34; needsShift = true; break;
+                    case "%": vk = 0x35; needsShift = true; break;
+                    case "^": vk = 0x36; needsShift = true; break;
+                    case "&": vk = 0x37; needsShift = true; break;
+                    case "*": vk = 0x38; needsShift = true; break;
+                    case "(": vk = 0x39; needsShift = true; break;
+                    case ")": vk = 0x30; needsShift = true; break;
+                    case "\"": vk = 0xDE; needsShift = true; break;
+                    case "'": vk = 0xDE; break;
                     default:
-                        if (upperKey.Length == 1)
+                        if (key.Length == 1)
                         {
-                            char ch = upperKey[0];
-                            if (ch >= 'A' && ch <= 'Z') vk = (byte)ch;
-                            else if (ch >= '0' && ch <= '9') vk = (byte)ch;
+                            char ch = key[0];
+                            if (ch >= 'a' && ch <= 'z')
+                            {
+                                vk = (byte)char.ToUpper(ch);
+                            }
+                            else if (ch >= 'A' && ch <= 'Z')
+                            {
+                                vk = (byte)ch;
+                                needsShift = true;
+                            }
+                            else if (ch >= '0' && ch <= '9')
+                            {
+                                vk = (byte)ch;
+                            }
                         }
                         break;
                 }
@@ -266,12 +303,15 @@ namespace AirCursorDesktop.Core
 
                 bool hasCtrl = modifiers != null && Array.Exists(modifiers, m => m.Equals("ctrl", StringComparison.OrdinalIgnoreCase));
                 bool hasAlt = modifiers != null && Array.Exists(modifiers, m => m.Equals("alt", StringComparison.OrdinalIgnoreCase));
+                bool hasShift = needsShift || (modifiers != null && Array.Exists(modifiers, m => m.Equals("shift", StringComparison.OrdinalIgnoreCase)));
 
                 if (hasCtrl) keybd_event(0x11, 0, 0, UIntPtr.Zero);
                 if (hasAlt) keybd_event(0x12, 0, 0, UIntPtr.Zero);
+                if (hasShift) keybd_event(0x10, 0, 0, UIntPtr.Zero);
 
                 SendVirtualKey(vk);
 
+                if (hasShift) keybd_event(0x10, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                 if (hasAlt) keybd_event(0x12, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                 if (hasCtrl) keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
             }
@@ -280,6 +320,7 @@ namespace AirCursorDesktop.Core
                 Console.WriteLine($"[WindowsMouseController] Keyboard input error: {ex.Message}");
             }
         }
+
 
         public void EmergencyStop()
         {
